@@ -1,0 +1,53 @@
+- name: Add kubernetes repository key to apt
+  ansible.builtin.get_url:
+    url: "https://pkgs.k8s.io/core:/stable:/v{{ kubeVersion }}/deb/Release.key"
+    dest: /etc/apt/keyrings/kubernetes.asc
+    mode: '0644'
+
+- name: Add kubernetes repository to apt
+  ansible.builtin.apt_repository:
+    repo: "deb [arch={{ 'amd64' if ansible_architecture == 'x86_64' else ansible_architecture }} signed-by=/etc/apt/keyrings/kubernetes.asc] https://pkgs.k8s.io/core:/stable:/v{{ kubeVersion }}/deb/ /"
+    state: present
+    filename: kubernetes
+
+- name: Install kubernetes
+  ansible.builtin.apt:
+    name: "{{kubePackages}}"
+    state: latest
+    update_cache: yes
+
+- name: Disable system swap
+  ansible.builtin.command: "swapoff -a"
+
+- name: Remove swap from /etc/fstab
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    regexp: 'swap'
+    state: absent
+
+- name: Set sysctl options for Kubernetes
+  ansible.posix.sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    sysctl_file: /etc/sysctl.d/68-kubernetes.conf
+    sysctl_set: yes
+    state: present
+  loop:
+  - { name: 'vm.swappiness', value: '0' }
+  - { name: 'vm.overcommit_memory', value: '1' }
+  - { name: 'vm.overcommit_ratio', value: '100' }
+  - { name: 'kernel.panic', value: '10' }
+  - { name: 'kernel.panic_on_oops', value: '1' }
+  ignore_errors: yes
+
+- name: Add crictl config
+  ansible.builtin.template:
+    src: crictl.yaml.j2
+    dest: /etc/crictl.yaml
+
+- name: start kubelet
+  ansible.builtin.systemd:
+    name: kubelet
+    daemon_reload: yes
+    state: restarted
+    enabled: yes

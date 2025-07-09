@@ -1,0 +1,11 @@
+- name: Restart all deployments in selected "{{ namespace }}"
+  delegate_to: localhost
+  ansible.builtin.command: "/bin/kubectl --kubeconfig=/etc/ansible/keys/kubernetes/{{ kubeDomain }}.conf -n {{ namespace }} rollout restart deployment"
+
+- name: Restart all statefulsets in selected "{{ namespace }}"
+  delegate_to: localhost
+  ansible.builtin.command: "/bin/kubectl --kubeconfig=/etc/ansible/keys/kubernetes/{{ kubeDomain }}.conf -n {{ namespace }} rollout restart sts"
+
+- name: Restart all daemonsets in selected "{{ namespace }}"
+  delegate_to: localhost
+  ansible.builtin.command: "/bin/kubectl --kubeconfig=/etc/ansible/keys/kubernetes/{{ kubeDomain }}.conf -n {{ namespace }} rollout restart daemonset"

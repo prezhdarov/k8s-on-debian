@@ -1,0 +1,38 @@
+---
+- name: Get some facts about the OS
+  ansible.builtin.gather_facts:
+
+- name: Add or remove debian backports
+  ansible.builtin.include_tasks:
+    file: debian_backports.yml
+    apply:
+      tags: debian
+  tags: debian
+  when: ansible_distribution in debianDistros and (enableBackports == "yes" or disableBackports == "yes")
+
+- name: Run debian updates
+  ansible.builtin.include_tasks:
+    file: debian_update.yml
+    apply:
+      tags: debian
+  tags: debian
+  when: ansible_distribution in debianDistros
+
+- name: Run rhel updates
+  ansible.builtin.include_tasks:
+    file: rhel_update.yml
+    apply:
+      tags: rhel
+  tags: rhel
+  when: ansible_distribution in rhelDistros
+
+- name: Reboot the system
+  ansible.builtin.reboot:
+    reboot_timeout: 300
+    msg: "updates..."
+  when: reboot == 'yes'
+
+- name: Wait {{ post_wait }}s for service to calm down...
+  ansible.builtin.pause:
+    seconds: "{{ post_wait }}"
+  when: postWait | int > 0

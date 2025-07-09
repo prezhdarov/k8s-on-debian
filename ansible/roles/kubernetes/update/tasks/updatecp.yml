@@ -1,0 +1,52 @@
+- name: Update control plane pods
+  delegate_to: "{{ master_node | split('.') | first }}"
+  block:
+  - name: Drain {{ worker_node }}
+    delegate_to: localhost
+    kubernetes.core.k8s_drain:
+      kubeconfig: "/etc/ansible/keys/kubernetes/{{ kubeDomain }}.conf"
+      state: drain
+      name: "{{ master_node }}"
+      delete_options:
+        delete_emptydir_data: yes
+        ignore_daemonsets: yes
+        force: false
+        disable_eviction: false
+        wait_timeout: 120
+    when: reboot == 'yes'        
+
+  - name: Update system to the latest
+    ansible.builtin.include_role:
+      name: linux/update
+    vars:
+      postWait: 30
+      
+  - name: Update Kubernetes repository with new version
+    ansible.builtin.include_tasks: kuberepo.yml
+    when: kubeVersion != ''
+
+  - name: Update apt and install kubeadm
+    ansible.builtin.apt:
+      name: kubeadm
+      state: latest
+      update_cache: yes
+
+  - name: Grab upgrade version from kubeadm
+    ansible.builtin.command: "kubeadm version --output short"
+    register: kube_version
+    when: master_index == 0
+
+  - name: Upgrade kubernetes node to new version (first node only)
+    ansible.builtin.command: "/bin/kubeadm upgrade apply -y {{ kube_version.stdout }}"
+    when: master_index == 0
+
+  - name: Upgrade kubernetes node and pods
+    ansible.builtin.command: "/bin/kubeadm upgrade node"
+
+  - name: Uncordon {{ master_node }}
+    delegate_to: localhost    
+    kubernetes.core.k8s_drain:
+      kubeconfig: "/etc/ansible/keys/kubernetes/{{ kubeDomain }}.conf"
+      state: uncordon
+      name: "{{ master_node }}"
+    when: reboot == 'yes'

@@ -1,0 +1,95 @@
+---
+- name: Grab /etc/kubernetes/admin.conf
+  become: yes
+  ansible.builtin.fetch:
+    flat: yes
+    src: /etc/kubernetes/admin.conf
+    dest: "/etc/ansible/keys/kubernetes/{{ kubeDomain }}.conf"
+  tags: always
+
+- name: Get all nodes
+  delegate_to: localhost
+  community.kubernetes.k8s_info:
+    kubeconfig: "/etc/ansible/keys/kubernetes/{{ kubeDomain }}.conf"
+    kind: Node
+  register: nodes
+  tags: 
+  - masters
+  - workers
+
+- name: Get all master nodes in the cluster
+  ansible.builtin.set_fact:
+    master_nodes: "{{ master_nodes | default([]) + [ item.metadata.name ] }}"
+  loop: "{{ nodes.resources }}"
+  loop_control:
+    label: "{{ item.metadata.name | split('.') | first }}"
+  when: "'node-role.kubernetes.io/control-plane' in item.metadata.labels"
+  tags: 
+  - masters
+  - workers
+
+- name: Get all worker nodes in the cluster
+  ansible.builtin.set_fact:
+    worker_nodes: "{{ worker_nodes | default([]) + [ item.metadata.name ] }}"
+  loop: "{{ nodes.resources }}"
+  loop_control:
+    label: "{{ item.metadata.name | split('.') | first }}"
+  when: "'node-role.kubernetes.io/control-plane' not in item.metadata.labels"
+  tags: 
+  - masters
+  - workers
+
+- name: Update master nodes control plane pods
+  ansible.builtin.include_tasks: 
+    file: updatecp.yml
+    apply:
+      tags: masters
+      vars:
+        master_node: "{{ item }}"
+        master_index: "{{ node_index }}"
+  loop: "{{ master_nodes }}"
+  loop_control:
+    label: "{{ item }}"
+    index_var: node_index
+  tags: masters
+
+- name: Update master nodes and restart kubelet
+  ansible.builtin.include_tasks: 
+    file: updatemaster.yml
+    apply:
+      tags: masters
+      vars:
+        master_node: "{{ item }}"
+  loop: "{{ master_nodes }}"
+  loop_control:
+    label: "{{ item }}"
+  tags: masters
+
+- name: Grab custom workers nodes list if any
+  ansible.builtin.set_fact:
+    custom_nodes: "{{ workers | split(',') if workers != '' else [] }}"
+  tags: workers
+
+- name: Update worker nodes
+  ansible.builtin.include_tasks: 
+    file: updateworker.yml
+    apply:
+      tags: workers
+      vars:
+        worker_node: "{{ item }}"
+  loop: "{{ custom_nodes if custom_nodes | length else worker_nodes }}"
+  loop_control:
+    label: "{{ item }}"
+  tags: workers
+
+- name: Restart various services in cluster
+  ansible.builtin.include_tasks: 
+    file: restart.yml
+    apply:
+      tags: restart
+      vars:
+        namespace: "{{ item }}"
+  loop: "{{ restartNamespaces }}"
+  loop_control:
+    label: "{{ item }}"
+  tags: restart

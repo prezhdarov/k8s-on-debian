@@ -1,0 +1,12 @@
+galaxy_info:
+  author: Atanas Prezhdarov
+  description: A tiny role to help update Debian servers
+  company: GTT
+
+  license: Apache-2.0
+
+  min_ansible_version: 2.1
+
+  galaxy_tags: []
+
+dependencies: []

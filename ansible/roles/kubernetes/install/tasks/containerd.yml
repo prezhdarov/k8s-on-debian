@@ -1,0 +1,76 @@
+- name: Remove legacy docker packages
+  ansible.builtin.apt:
+    name: "{{ legacyDockerPackages }}"
+    state: absent
+
+- name: Add docker repository key to apt
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/debian/gpg
+    dest: /etc/apt/keyrings/docker.asc
+    mode: '0644'
+
+- name: Add docker repository to apt
+  ansible.builtin.apt_repository:
+    repo: "deb [arch={{ 'amd64' if ansible_architecture == 'x86_64' else ansible_architecture }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian {{ ansible_distribution_release }} stable"
+    state: present
+    filename: docker
+
+- name: Install containerd.io
+  ansible.builtin.apt:
+    name: containerd.io
+    state: latest
+    update_cache: yes
+
+- name: Copy containerd logrotate file to /etc/logrotate.d
+  ansible.builtin.template:
+    src: logrotate.containerd
+    dest: /etc/logrotate.d/containerd
+
+- name: Add the br_netfilter module
+  community.general.modprobe:
+    name: br_netfilter
+    state: present
+
+- name: Set sysctl options for Docker
+  ansible.posix.sysctl:
+      name: "{{ item.name }}"
+      value: "{{ item.value }}"
+      sysctl_file: /etc/sysctl.d/67-containerd.conf
+      sysctl_set: yes
+      state: present
+  loop:
+  - { name: 'net.ipv4.ip_forward', value: '1' }
+  - { name: 'net.bridge.bridge-nf-call-iptables', value: '1'}
+  - { name: 'net.bridge.bridge-nf-call-ip6tables', value: '1' }
+  - { name: 'fs.inotify.max_user_instances', value: '1280' }
+  - { name: 'fs.inotify.max_user_watches', value: '655360' }
+  ignore_errors: yes
+
+- name: create containerd config
+  ansible.builtin.shell: 'containerd config default > /etc/containerd/config.toml'
+
+- name: Set containerd log level to warn
+  ansible.builtin.lineinfile:
+    dest: /etc/containerd/config.toml
+    state: present
+    regexp: 'level = ""'
+    line: 'level = "warn"'
+
+- name: Set containerd cgroups to systemd
+  ansible.builtin.replace:
+    dest: /etc/containerd/config.toml
+    regexp: 'SystemdCgroup = false'
+    replace: 'SystemdCgroup = true'
+
+- name: Set device ownership
+  ansible.builtin.replace:
+    dest: /etc/containerd/config.toml
+    regexp: 'device_ownership_from_security_context = false'
+    replace: 'device_ownership_from_security_context = true'
+
+- name: start containerd
+  ansible.builtin.systemd:
+    name: containerd
+    daemon_reload: yes
+    state: restarted
+    enabled: yes

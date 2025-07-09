@@ -1,0 +1,48 @@
+- name: Update worker
+  delegate_to: "{{ worker_node | split('.') | first }}"
+  block:
+  - name: Update Kubernetes repository with new version
+    ansible.builtin.include_tasks: kuberepo.yml
+    when: kubeVersion != ''
+
+  - name: Drain {{ worker_node }}
+    delegate_to: localhost
+    ignore_errors: yes
+    when: reboot == 'yes'
+    register: result
+    retries: 10
+    delay: 30  # seconds between retries
+    until: result.failed == false
+    kubernetes.core.k8s_drain:
+      kubeconfig: "/etc/ansible/keys/kubernetes/{{ kubeDomain }}.conf"
+      state: drain
+      name: "{{ worker_node }}"
+      delete_options:
+        delete_emptydir_data: yes
+        ignore_daemonsets: yes
+        force: false
+        disable_eviction: false
+        wait_timeout: 600
+    when: reboot == 'yes'        
+
+  - name: Update system to the latest
+    ansible.builtin.include_role:
+      name: linux/update
+
+  - name: Upgrade kubernetes node and pods
+    ansible.builtin.command: "/bin/kubeadm upgrade node"
+
+  - name: Restart kubelet
+    ansible.builtin.systemd:
+      name: kubelet
+      daemon_reload: yes
+      state: restarted
+      enabled: yes
+
+  - name: Uncordon {{ worker_node }}
+    delegate_to: localhost
+    kubernetes.core.k8s_drain:
+      kubeconfig: "/etc/ansible/keys/kubernetes/{{ kubeDomain }}.conf"
+      state: uncordon
+      name: "{{ worker_node }}"
+    when: reboot == 'yes'

@@ -1,0 +1,17 @@
+---
+postWait: 0
+
+reboot: 'no'
+
+enableBackports: "no"
+disableBackports: "no"
+
+
+debianDistros:
+- Debian
+- Ubuntu
+
+rhelDistros:
+- Red Hat Enterprise Linux
+- CentOS
+- Rocky

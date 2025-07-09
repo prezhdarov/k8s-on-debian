@@ -1,0 +1,20 @@
+---
+# defaults file for install
+kubeVersion: 1.32
+
+containerdSocket: unix:///run/containerd/containerd.sock
+
+legacyDockerPackages:
+- docker.io 
+- docker-doc 
+- docker-compose 
+- podman-docker 
+- containerd 
+- runc
+
+kubePackages:
+- kubelet
+- kubectl
+- kubeadm
+
+

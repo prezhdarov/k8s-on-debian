@@ -1,0 +1,9 @@
+- hosts: "{{ target }}"
+  gather_facts: true
+  become: true
+  serial: 1
+  vars:
+    reboot: 'yes'
+    kubeDomain: example.k8s
+  roles:
+  - role: kubernetes/update

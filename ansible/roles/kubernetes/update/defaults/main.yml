@@ -1,0 +1,16 @@
+---
+reboot: 'no'
+
+kubeVersion: ""
+kubeDomain: example.k8s
+
+workers: ""
+
+restartNamespaces:
+- monitoring
+- logging
+- trident
+- victoria-metrics
+- vault-infra
+- pinniped-concierge
+- kube-system

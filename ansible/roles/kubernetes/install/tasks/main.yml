@@ -1,0 +1,6 @@
+---
+- name: Install and configure containerd
+  include_tasks: containerd.yml
+
+- name: Install and configure kubernetes
+  include_tasks: kubernetes.yml
