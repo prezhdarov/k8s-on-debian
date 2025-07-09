@@ -1,0 +1,30 @@
+---
+
+site: the-cloud
+domain: example.cloud
+
+cluster_create: "no"
+master_add: "no"
+worker_add: "no"
+node_reset: "no"
+
+kubeAPIFQDN: "example-k8s.{{ domain }}"
+kubeAPIIP: "172.29.69.10/24"
+kubeDomain:  "example.k8s"
+kubeName: "{{ kubeDomain | replace('.','-') }}"
+podCIDR: "172.30.0.0/16"
+serviceCIDR: "172.20.0.0/20"
+
+containerdSocket: unix:///run/containerd/containerd.sock
+
+kubeVIPVersion: 0.9.2
+kubeVIPInterface: mgmt
+
+ciliumVersion: 1.17.5
+
+kubeAPIPort: 6443
+podCIDRSubnetSize: 24
+
+masterFiles:
+- /etc/kubernetes/pki/secret.yaml
+- /etc/kubernetes/admin.conf

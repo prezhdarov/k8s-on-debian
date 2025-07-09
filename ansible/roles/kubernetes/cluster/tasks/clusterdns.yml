@@ -1,0 +1,7 @@
+- name: debug A record
+  debug:
+    msg: "{{ kubeAPIFQDN | split('.') | first}} => {{ kubeAPIIP | ansible.utils.ipaddr('address') }} zone: {{ domain }}"
+
+- name: debug PTR record
+  debug:
+    msg: "{{ (kubeAPIIP | ansible.utils.ipaddr('address') | split('.'))[3]  }}.{{ (kubeAPIIP | ansible.utils.ipaddr('address') | split('.'))[2] }} => {{ kubeAPIFQDN }} zone: {{ (kubeAPIIP | ansible.utils.ipaddr('address') | split('.'))[1]  }}.{{ (kubeAPIIP | ansible.utils.ipaddr('address') | split('.'))[0] }}.in-addr.arpa"

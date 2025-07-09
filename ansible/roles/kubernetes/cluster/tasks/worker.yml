@@ -1,0 +1,47 @@
+- name: Add master to cluster {{ kubeDomain }}
+  when: kubeAPIFQDN != ''
+  block:
+  - name: Restart kubelet
+    ansible.builtin.systemd_service:
+      name: kubelet
+      state: restarted
+      daemon_reload: yes
+      enabled: yes
+
+  - name: Generate join token
+    delegate_to: "{{ kubeAPIFQDN }}"
+    become: yes
+    ansible.builtin.command: "/bin/kubeadm token create --print-join-command --kubeconfig=/etc/kubernetes/admin.conf"
+    register: joinToken
+
+  - name: Join cluster
+    become: yes
+    ansible.builtin.command: "{{ joinToken.stdout }}"
+
+
+  - name: Add zone label
+    ansible.builtin.command: "/bin/kubectl --kubeconfig /etc/kubernetes/admin.conf label --overwrite node {{ inventory_hostname }}.{{ domain }} zone={{ site }}"
+
+  - name: Add topology label
+    ansible.builtin.command: "/bin/kubectl --kubeconfig /etc/kubernetes/admin.conf label --overwrite node {{ inventory_hostname }}.{{ domain }} topology.kubernetes.io/zone={{ site }}"
+
+  - name: Add worker label
+    ansible.builtin.command: "/bin/kubectl --kubeconfig /etc/kubernetes/admin.conf label --overwrite node {{ inventory_hostname }}.{{ domain }} node-role.kubernetes.io/worker="
+
+  - name: Add security into Kubelet for CIS as tested
+    ansible.builtin.blockinfile:
+      path: /var/lib/kubelet/config.yaml
+      block: |
+        eventRecordQPS: 0
+        readOnlyPort: 0
+        protectKernelDefaults: true
+        ServerTLSBootstrap: true
+        tlsCertFile: /var/lib/kubelet/pki/kubelet.crt
+        tlsPrivateKeyFile: /var/lib/kubelet/pki/kubelet.key
+
+  - name: Restart kubelet
+    ansible.builtin.systemd_service:
+      name: kubelet
+      state: restarted
+      daemon_reload: yes
+      enabled: yes

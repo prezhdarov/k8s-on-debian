@@ -1,0 +1,16 @@
+- name: Add cilium chart repo
+  delegate_to: localhost
+  kubernetes.core.helm_repository:
+    name: cilium
+    repo_url: "https://helm.cilium.io/"
+
+- name: Deploy cilium {{ ciliumVersion }}
+  delegate_to: localhost
+  kubernetes.core.helm:
+    kubeconfig: "/etc/ansible/keys/kubernetes/{{ kubeDomain }}.conf"
+    name: cilium
+    chart_ref: cilium/cilium
+    chart_version: "{{ ciliumVersion }}"
+    release_namespace: kube-system
+    values: "{{ lookup('template', 'cilium.values.yml.j2') | from_yaml }}"
+

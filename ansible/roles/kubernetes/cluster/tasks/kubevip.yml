@@ -1,0 +1,4 @@
+- name: Deploy kube-vip daemonset
+  kubernetes.core.k8s:
+    state: present
+    template: "{{ lookup('template', 'kube-vip.yml.j2') | from_yaml }}"

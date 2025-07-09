@@ -1,0 +1,9 @@
+---
+- include_tasks: cluster.yml
+  when: cluster_create == 'yes' and master_add == 'no' and worker_add == 'no'
+
+- include_tasks: master.yml
+  when: cluster_create == 'no' and master_add == 'yes' and worker_add == 'no'
+
+- include_tasks: worker.yml
+  when: cluster_create == 'no' and master_add == 'no' and worker_add == 'yes'

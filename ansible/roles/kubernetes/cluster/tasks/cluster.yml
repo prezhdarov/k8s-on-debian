@@ -1,0 +1,106 @@
+- name: Set Kubernetes API DNS
+  include_tasks: clusterdns.yml
+
+- name: Create Kubernets cluster {{ kubeDomain }}
+  when: kubeAPIFQDN != '' and kubeAPIIP != '' and kubeDomain != '' and podCIDR != '' and serviceCIDR != ''
+  block:
+  - name: Add API virtual IP address
+    ansible.builtin.command:
+      cmd: "ip addr add {{ kubeAPIIP }} dev {{ kubeVIPInterface }}"
+    when: "kubeAPIIP | ansible.utils.ipaddr('address')  not in ansible_all_ipv4_addresses"
+
+  - name: Generate encryption key
+    delegate_to: localhost
+    ansible.builtin.shell: "head -c 4096 /dev/urandom | LC_CTYPE=C tr -cd 'a-zA-Z0-9' | head -c 32"
+    register: encryptionKey
+
+  - name: Generate kubeadm-config
+    ansible.builtin.template:
+      src: kubeadm-config.yml.j2
+      dest: /etc/kubernetes/kubeadm-config.yml
+      owner: root
+      group: root
+      mode: 0644
+
+  - name: Create /etc/kubernetes/pki
+    ansible.builtin.file:
+      dest: /etc/kubernetes/pki
+      state: directory
+      owner: root
+      group: root
+      mode: 0755
+
+  - name: Generate event.yml
+    ansible.builtin.template:
+      src: event.yml.j2
+      dest: /etc/kubernetes/pki/event.yaml
+      owner: root
+      group: root
+      mode: 0644
+
+  - name: Generate secret.yml
+    ansible.builtin.template:
+      src: secret.yml.j2
+      dest: /etc/kubernetes/pki/secret.yaml
+      owner: root
+      group: root
+      mode: 0644
+
+  - name: Generate admission.yml
+    ansible.builtin.template:
+      src: admission.yml.j2
+      dest: /etc/kubernetes/pki/admission.yaml
+      owner: root
+      group: root
+      mode: 0644
+
+  - name: Setup kube-vip
+    ansible.builtin.include_role:
+      name: kubernetes/kube-vip
+    vars:
+      version: "{{ kubeVIPVersion }}"
+      address: "{{ kubeAPIIP }}"
+      interface: "{{ kubeVIPInterface }}"
+
+  - name: Restart kubelet
+    ansible.builtin.systemd_service:
+      name: kubelet
+      state: restarted
+      daemon_reload: yes
+      enabled: yes
+
+  - name: Bring the VIP address since kube-vip is slacking...
+    become: yes
+    command: "/usr/sbin/ip address add {{ kubeAPIIP }} dev {{ kubeVIPInterface }}"
+
+  - name: Create the Kubernetes cluster
+    ansible.builtin.command: "/bin/kubeadm init --config=/etc/kubernetes/kubeadm-config.yml --upload-certs --skip-phases=addon/kube-proxy"
+
+  - name: Grab /etc/kubernetes/admin.conf
+    become: yes
+    ansible.builtin.fetch:
+      flat: yes
+      src: /etc/kubernetes/admin.conf
+      dest: "/etc/ansible/keys/kubernetes/{{ kubeDomain }}.conf"
+
+  - name: Add zone label
+    delegate_to: localhost
+    ansible.builtin.command: "/bin/kubectl --kubeconfig /etc/ansible/keys/kubernetes/{{ kubeDomain }}.conf label --overwrite node {{ inventory_hostname }}.{{ domain }} zone={{ site }}"
+
+  - name: Setup cilium
+    include_tasks: cilium.yml
+
+  - name: Setup kube-vip
+    include_tasks: kubevip.yml    
+
+  - name: Restart kubelet
+    ansible.builtin.systemd_service:
+      name: kubelet
+      state: restarted
+      daemon_reload: yes
+      enabled: yes
+
+  - name: Remove kubeadm-config
+    ansible.builtin.file:
+      path: /etc/kubernetes/kubeadm-config.yml
+      state: absent

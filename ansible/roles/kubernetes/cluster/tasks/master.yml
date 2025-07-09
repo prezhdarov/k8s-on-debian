@@ -1,0 +1,90 @@
+- name: Add master to cluster {{ kubeDomain }}
+  when: kubeAPIFQDN != ''
+  block:
+  - name: Create /etc/kubernetes/pki
+    ansible.builtin.file:
+      dest: /etc/kubernetes/pki
+      state: directory
+      owner: root
+      group: root
+      mode: 0755
+
+  - name: Create /etc/kubernetes/pki/etcd
+    ansible.builtin.file:
+      dest: /etc/kubernetes/pki/etcd
+      state: directory
+      owner: root
+      group: root
+      mode: 0755
+
+  - name: Generate event.yml
+    ansible.builtin.template:
+      src: event.yml.j2
+      dest: /etc/kubernetes/pki/event.yaml
+      owner: root
+      group: root
+      mode: 0644
+
+  - name: Generate admission.yml
+    ansible.builtin.template:
+      src: admission.yml.j2
+      dest: /etc/kubernetes/pki/admission.yaml
+      owner: root
+      group: root
+      mode: 0644
+
+  - name: Grab setup files from existing master
+    become: yes
+    delegate_to: "{{ kubeAPIFQDN }}"
+    ansible.builtin.fetch:
+      src: "{{ item }}"
+      dest: "/tmp"
+    loop: "{{ masterFiles }}"
+
+  - name: Copy setup files to the new master
+    ansible.builtin.copy:
+      src: "/tmp/{{ inventory_hostname }}/{{ item }}"
+      dest: "{{ item }}"
+      owner: root
+      group: root
+      mode: 0644
+    loop: "{{ masterFiles }}"
+
+  - name: Restart kubelet
+    ansible.builtin.systemd_service:
+      name: kubelet
+      state: restarted
+      daemon_reload: yes
+      enabled: yes
+
+  - name: Upload certificates
+    delegate_to: "{{ kubeAPIFQDN }}"
+    become: yes
+    ansible.builtin.command: "/bin/kubeadm init phase upload-certs --upload-certs --kubeconfig=/etc/kubernetes/admin.conf"
+    register: certKey
+
+  - name: Generate join token
+    delegate_to: "{{ kubeAPIFQDN }}"
+    become: yes
+    ansible.builtin.command: "/bin/kubeadm token create --print-join-command --kubeconfig=/etc/kubernetes/admin.conf"
+    register: joinToken
+
+  - name: Join cluster
+    become: yes
+    ansible.builtin.command: "{{ joinToken.stdout }}  --control-plane --certificate-key {{ certKey.stdout_lines[2] }}"
+
+  - name: Add zone label
+    ansible.builtin.command: "/bin/kubectl --kubeconfig /etc/kubernetes/admin.conf label --overwrite node {{ inventory_hostname }}.{{ domain }} zone={{ site }}"
+
+  - name: Restart kubelet
+    ansible.builtin.systemd_service:
+      name: kubelet
+      state: restarted
+      daemon_reload: yes
+      enabled: yes
+
+  - name: Remove /tmp/{{ inventory_hostname}}
+    delegate_to: localhost
+    ansible.builtin.file:
+      path: "/tmp/{{ inventory_hostname }}"
+      state: absent

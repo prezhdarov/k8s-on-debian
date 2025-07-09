@@ -1,0 +1,12 @@
+galaxy_info:
+  author: Atanas Prezhdarov
+  description: A role that creates clusters or adds nodes to existing ones.
+  company: GTT
+
+  license: Apache-2.0
+
+  min_ansible_version: 2.1
+  
+  galaxy_tags: []
+  
+dependencies: []
