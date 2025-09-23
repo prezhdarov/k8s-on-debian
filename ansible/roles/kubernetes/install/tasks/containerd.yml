@@ -9,11 +9,11 @@
     dest: /etc/apt/keyrings/docker.asc
     mode: '0644'
 
-- name: Add docker repository to apt
-  ansible.builtin.apt_repository:
-    repo: "deb [arch={{ 'amd64' if ansible_architecture == 'x86_64' else ansible_architecture }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian {{ ansible_distribution_release }} stable"
-    state: present
-    filename: docker
+- name: Add docker.list
+  ansible.builtin.template:
+    src: docker.list.j2
+    dest: /etc/apt/sources.list.d/docker.list
+    mode: '0640'
 
 - name: Install containerd.io
   ansible.builtin.apt:
