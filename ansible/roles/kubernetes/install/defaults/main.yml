@@ -1,5 +1,4 @@
 ---
-# defaults file for install
 kubeVersion: 1.32
 
 containerdSocket: unix:///run/containerd/containerd.sock

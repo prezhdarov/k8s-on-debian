@@ -1,14 +1,14 @@
 ---
 - name: Add backports.list
   ansible.builtin.template:
-    src: debian{{ ansible_distribution_major_version }}.backports.list
+    src: debian.backports.list.j2
     dest: /etc/apt/sources.list.d/backports.list
     mode: '0640'
   when: enableBackports == "yes"
 
 - name: Add backports preferences
   ansible.builtin.template:
-    src: debian{{ ansible_distribution_major_version }}.backports.preferences
+    src: debian.backports.preferences.j2
     dest: /etc/apt/preferences.d/backports
     mode: '0640'
   when: enableBackports == "yes"
