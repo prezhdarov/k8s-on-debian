@@ -9,8 +9,8 @@
     path: /etc/apt/sources.list.d/kubernetes.list
     state: absent
 
-- name: Add kubernetes repository to apt
-  ansible.builtin.apt_repository:
-    repo: "deb [arch={{ 'amd64' if ansible_architecture == 'x86_64' else ansible_architecture }} signed-by=/etc/apt/keyrings/kubernetes.asc] https://pkgs.k8s.io/core:/stable:/v{{ kubeVersion }}/deb/ /"
-    state: present
-    filename: kubernetes
+- name: Add kubernetes.list
+  ansible.builtin.template:
+    src: kubernetes.list.j2
+    dest: /etc/apt/sources.list.d/kubernetes.list
+    mode: '0640'
