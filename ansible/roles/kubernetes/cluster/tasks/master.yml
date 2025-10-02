@@ -74,7 +74,10 @@
     ansible.builtin.command: "{{ joinToken.stdout }}  --control-plane --certificate-key {{ certKey.stdout_lines[2] }}"
 
   - name: Add zone label
-    ansible.builtin.command: "/bin/kubectl --kubeconfig /etc/kubernetes/admin.conf label --overwrite node {{ inventory_hostname }}.{{ domain }} zone={{ site }}"
+    delegate_to: "{{ kubeAPIFQDN }}"
+    become: yes
+    when: site != ''
+    ansible.builtin.command: "/bin/kubectl --kubeconfig /etc/kubernetes/admin.conf label --overwrite node {{ inventory_hostname }}.{{ hostDomain }} zone={{ site }}"
 
   - name: Restart kubelet
     ansible.builtin.systemd_service:

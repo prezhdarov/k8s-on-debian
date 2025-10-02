@@ -1,0 +1,25 @@
+- name: Lookup API VIP address
+  ansible.builtin.set_fact:
+    kubeAPIIP: "{{ lookup('community.general.dig', kubeAPIFQDN) }}"
+
+- name: Find what route leads to the VIP
+  ansible.builtin.command: "ip route get {{ kubeAPIIP }}"
+  register: routeInfo
+
+- name: Grab the interface that routes to VIP
+  ansible.builtin.set_fact:
+    hostIP: "{{ (routeInfo.stdout | split)[4] }}"
+    kubeVIPInterface: "{{ (routeInfo.stdout | split)[2] }}"
+
+- name: Find the first IP address configured on the route interface
+  ansible.builtin.command: "ip -o -f inet addr show {{ kubeVIPInterface }}"
+  register: hostIPInfo
+
+- name: Extract the prefix from the IP address above
+  ansible.builtin.set_fact:
+    kubeAPIPrefix: "{{ (((hostIPInfo.stdout_lines | select('search', hostIP))[0] | split)[3] | split('/'))[1] }}"
+
+- name: Add API VIP address to the system
+  ansible.builtin.command:
+    cmd: "ip addr add {{ kubeAPIIP }}/{{ kubeAPIPrefix }} dev {{ kubeVIPInterface }}"
+  when: "kubeAPIIP not in ansible_all_ipv4_addresses"

@@ -2,8 +2,11 @@
   include_tasks: clusterdns.yml
 
 - name: Create Kubernets cluster {{ kubeDomain }}
-  when: kubeAPIFQDN != '' and kubeAPIIP != '' and kubeDomain != '' and podCIDR != '' and serviceCIDR != ''
+  when: kubeAPIFQDN!= '' and kubeDomain != '' and podCIDR != '' and serviceCIDR != ''
   block:
+  - name: Configure VIP address
+    include_tasks: vip.yml
+
   - name: Add API virtual IP address
     ansible.builtin.command:
       cmd: "ip addr add {{ kubeAPIIP }} dev {{ kubeVIPInterface }}"
@@ -69,10 +72,6 @@
       daemon_reload: yes
       enabled: yes
 
-  - name: Bring the VIP address since kube-vip is slacking...
-    become: yes
-    command: "/usr/sbin/ip address add {{ kubeAPIIP }} dev {{ kubeVIPInterface }}"
-
   - name: Create the Kubernetes cluster
     ansible.builtin.command: "/bin/kubeadm init --config=/etc/kubernetes/kubeadm-config.yml --upload-certs --skip-phases=addon/kube-proxy"
 
@@ -84,8 +83,10 @@
       dest: "/etc/ansible/keys/kubernetes/{{ kubeDomain }}.conf"
 
   - name: Add zone label
-    delegate_to: localhost
-    ansible.builtin.command: "/bin/kubectl --kubeconfig /etc/ansible/keys/kubernetes/{{ kubeDomain }}.conf label --overwrite node {{ inventory_hostname }}.{{ domain }} zone={{ site }}"
+    delegate_to: "{{ kubeAPIFQDN }}"
+    become: yes
+    when: site != ''
+    ansible.builtin.command: "/bin/kubectl --kubeconfig /etc/ansible/keys/kubernetes/{{ kubeDomain }}.conf label --overwrite node {{ inventory_hostname }}.{{ hostDomain }} zone={{ site }}"
 
   - name: Setup cilium
     include_tasks: cilium.yml

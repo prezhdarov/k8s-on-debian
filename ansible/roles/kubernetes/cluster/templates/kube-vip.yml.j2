@@ -118,9 +118,9 @@ spec:
         - manager
         env:
         - name: address
-          value: {{ kubeAPIIP | ansible.utils.ipaddr('address') }}
+          value: {{ kubeAPIIP }}
         - name: vip_subnet
-          value: "{{ kubeAPIIP | ansible.utils.ipaddr('netmask') }}"
+          value: "{{ kubeAPIPrefix }}"
         - name: port
           value: "6443"
         - name: vip_nodename

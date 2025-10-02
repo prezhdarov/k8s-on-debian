@@ -1,4 +1,4 @@
-k8sServiceHost: {{ kubeAPIFQDN }}
+k8sServiceHost: {{ kubeAPIFQDN}}
 k8sServicePort: 6443
 kubeProxyReplacement: true
 
@@ -10,8 +10,8 @@ k8s:
   requireIPv4PodCIDR: true
 
 cluster:
-  id: 25
-  name: {{ kubeDomain | replace('.','-') }}
+  id: {{ ciliumClusterID }}
+  name: {{ kubeName }}
 
 etcd:
   clusterDomain: {{ kubeDomain }} 

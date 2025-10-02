@@ -20,13 +20,22 @@
 
 
   - name: Add zone label
-    ansible.builtin.command: "/bin/kubectl --kubeconfig /etc/kubernetes/admin.conf label --overwrite node {{ inventory_hostname }}.{{ domain }} zone={{ site }}"
+    delegate_to: "{{ kubeAPIFQDN }}"
+    become: yes
+    when: site != ''
+    ansible.builtin.command: "/bin/kubectl --kubeconfig /etc/kubernetes/admin.conf label --overwrite node {{ inventory_hostname }}.{{ hostDomain }} zone={{ site }}"
 
   - name: Add topology label
-    ansible.builtin.command: "/bin/kubectl --kubeconfig /etc/kubernetes/admin.conf label --overwrite node {{ inventory_hostname }}.{{ domain }} topology.kubernetes.io/zone={{ site }}"
+    delegate_to: "{{ kubeAPIFQDN }}"
+    become: yes
+    when: site != ''    
+    ansible.builtin.command: "/bin/kubectl --kubeconfig /etc/kubernetes/admin.conf label --overwrite node {{ inventory_hostname }}.{{ hostDomain }} topology.kubernetes.io/zone={{ site }}"
 
   - name: Add worker label
-    ansible.builtin.command: "/bin/kubectl --kubeconfig /etc/kubernetes/admin.conf label --overwrite node {{ inventory_hostname }}.{{ domain }} node-role.kubernetes.io/worker="
+    delegate_to: "{{ kubeAPIFQDN }}"
+    become: yes
+    when: site != ''  
+    ansible.builtin.command: "/bin/kubectl --kubeconfig /etc/kubernetes/admin.conf label --overwrite node {{ inventory_hostname }}.{{ hostDomain }} node-role.kubernetes.io/worker="
 
   - name: Add security into Kubelet for CIS as tested
     ansible.builtin.blockinfile:
