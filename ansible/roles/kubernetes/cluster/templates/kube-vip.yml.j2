@@ -1,3 +1,4 @@
+---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -112,7 +113,7 @@ spec:
                 operator: Exists
       containers:
       - name: kube-vip      
-        image: ghcr.io/kube-vip/kube-vip:{{ kubeVIPVersion }}
+        image: ghcr.io/kube-vip/kube-vip:v{{ kubeVIPVersion }}
         imagePullPolicy: IfNotPresent              
         args:
         - manager

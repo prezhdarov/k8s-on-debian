@@ -3,6 +3,7 @@
   kubernetes.core.helm_repository:
     name: cilium
     repo_url: "https://helm.cilium.io/"
+    force_update: yes
 
 - name: Deploy cilium {{ ciliumVersion }}
   delegate_to: localhost

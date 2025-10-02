@@ -1,4 +1,6 @@
 - name: Deploy kube-vip daemonset
+  delegate_to: localhost
   kubernetes.core.k8s:
+    kubeconfig: "/etc/ansible/keys/kubernetes/{{ kubeDomain }}.conf"
     state: present
-    template: "{{ lookup('template', 'kube-vip.yml.j2') | from_yaml }}"
+    template: "{{ lookup('template', 'kube-vip.yml.j2') | from_yaml_all }}"

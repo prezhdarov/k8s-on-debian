@@ -16,6 +16,8 @@ cluster:
 etcd:
   clusterDomain: {{ kubeDomain }} 
 
+devices: {{ kubeVIPInterface }}  
+
 hubble:
   metrics:
     enabled:
@@ -34,6 +36,9 @@ hubble:
 
 cni:
   exclusive: false
+
+envoy:
+  enabled: false  
 
 ipam:
   operator:
