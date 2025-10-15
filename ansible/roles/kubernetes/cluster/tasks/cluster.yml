@@ -1,6 +1,3 @@
-- name: Set Kubernetes API DNS
-  include_tasks: clusterdns.yml
-
 - name: Create Kubernets cluster {{ kubeDomain }}
   when: kubeAPIFQDN!= '' and kubeDomain != '' and podCIDR != '' and serviceCIDR != ''
   block:

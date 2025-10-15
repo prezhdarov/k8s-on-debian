@@ -3,4 +3,4 @@
   kubernetes.core.k8s:
     kubeconfig: "/etc/ansible/keys/kubernetes/{{ kubeDomain }}.conf"
     state: present
-    template: "{{ lookup('template', 'kube-vip.yml.j2') | from_yaml_all }}"
+    definition: "{{ lookup('template', 'kube-vip.yml.j2') | from_yaml_all }}"
