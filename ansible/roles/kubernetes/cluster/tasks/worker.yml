@@ -33,8 +33,7 @@
 
   - name: Add worker label
     delegate_to: "{{ kubeAPIFQDN }}"
-    become: yes
-    when: site != ''  
+    become: yes 
     ansible.builtin.command: "/bin/kubectl --kubeconfig /etc/kubernetes/admin.conf label --overwrite node {{ inventory_hostname }}.{{ hostDomain }} node-role.kubernetes.io/worker="
 
   - name: Add security into Kubelet for CIS as tested

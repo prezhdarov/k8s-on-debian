@@ -1,0 +1,11 @@
+- hosts: "{{ target }}"
+  gather_facts: true
+  become: true
+  serial: 1
+  vars:
+   kubeAPIFQDN: example-k8s.example.cloud
+   kubeDomain: example.k8s
+   ciliumClusterID: 10
+  roles:
+  - role: kubernetes/install
+  - role: kubernetes/cluster
